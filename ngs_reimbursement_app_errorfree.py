@@ -14,7 +14,7 @@ import plotly.express as px
 # Sidebar Inputs
 # --------------------------
 st.sidebar.markdown("### Optional Inputs")
-zip_code = st.sidebar.text_input("Enter ZIP Code (for future regional guidance):")
+zip_code = st.sidebar.text_input("Enter ZIP Code (for regional denial context):")
 test_strategy = st.sidebar.radio("Test Strategy:", ["Panel Only", "Carve-out from WES", "Carve-out from WGS"])
 
 # --------------------------
@@ -111,29 +111,23 @@ filter_risk = st.multiselect("Filter panels by risk level:", options=["Low", "Me
 filtered_panels = [p for p in available_panels if not filter_risk or risk_notes.get(p, {}).get("risk_level") in filter_risk]
 
 # --------------------------
-# Display Analysis
+# Step 5-7: Display Analysis and ROI
 # --------------------------
+report_records = []
 for selected_panel in selected_panels:
     if selected_panel not in filtered_panels:
         st.warning(f"{selected_panel} does not meet current risk filter.")
 
     st.markdown(f"### Analysis for {selected_panel}")
-
     panel_gene_count = sophia_panels[selected_panel]
-    if selected_panel in risk_notes:
-        risk_level = risk_notes[selected_panel]['risk_level']
-        badge_color = {
-            "Low": "✅",
-            "Medium": "🟡",
-            "High": "🔴",
-            "Very High": "🚨"
-        }.get(risk_level, "⚠️")
-        st.markdown(f"#### {badge_color} Risk Level: {risk_level}")
-        billing_note = risk_notes[selected_panel]['billing_note']
-        st.info(billing_note)
-    else:
-        risk_level = "Not Specified"
-        billing_note = "Standard documentation applies."
+    risk_level = risk_notes.get(selected_panel, {}).get("risk_level", "Not Specified")
+    billing_note = risk_notes.get(selected_panel, {}).get("billing_note", "Standard documentation applies.")
+
+    badge_color = {
+        "Low": "✅", "Medium": "🟡", "High": "🔴", "Very High": "🚨"
+    }.get(risk_level, "⚠️")
+    st.markdown(f"#### {badge_color} Risk Level: {risk_level}")
+    st.info(billing_note)
 
     cpt_mapping = {"<50": "81450", "50-100": "81455", ">100": "81455"}
     if panel_gene_count <= 50:
@@ -146,7 +140,14 @@ for selected_panel in selected_panels:
     st.markdown(f"**CPT Code Recommendation: {suggested_cpt}**")
     st.markdown(f"**Billing Note:** {billing_note}")
 
-    # ROI Simulation for Carve-out
+    report_records.append({
+        "Panel": selected_panel,
+        "Genes": panel_gene_count,
+        "Risk": risk_level,
+        "CPT Code": suggested_cpt,
+        "Billing Guidance": billing_note
+    })
+
     if test_strategy.startswith("Carve-out"):
         st.markdown("### ROI Simulation for Carve-out")
         cost = st.number_input(f"{selected_panel} – Total Cost per WES/WGS Test ($):", min_value=500, max_value=3000, value=1200)
@@ -192,32 +193,31 @@ fig = px.choropleth(
     scope="usa",
     title="Estimated NGS Denial Rates by State"
 )
-
 st.plotly_chart(fig, use_container_width=True)
 
 # --------------------------
 # Step 9: Export Summary Report
 # --------------------------
-report_data = {
-    "ZIP Code": zip_code,
-    "Test Strategy": test_strategy,
-    "Test Type": test_type,
-    "Panels Selected": ", ".join(selected_panels)
-}
+summary_data = pd.DataFrame(report_records)
+summary_data.insert(0, "ZIP Code", zip_code)
+summary_data.insert(1, "Test Strategy", test_strategy)
+summary_data.insert(2, "Test Type", test_type)
 
-csv_data = pd.DataFrame([report_data])
-csv = csv_data.to_csv(index=False).encode('utf-8')
-st.download_button("⬇️ Download CSV Report", data=csv, file_name="ngs_report.csv", mime="text/csv")
+csv = summary_data.to_csv(index=False).encode('utf-8')
+st.download_button("⬇️ Download CSV Report", data=csv, file_name="ngs_full_report.csv", mime="text/csv")
 
 pdf_buffer = BytesIO()
 c = canvas.Canvas(pdf_buffer, pagesize=letter)
 c.drawString(100, 750, "NGS Reimbursement Report")
 y = 720
-for k, v in report_data.items():
-    c.drawString(100, y, f"{k}: {v}")
-    y -= 20
+for col in summary_data.columns:
+    c.drawString(100, y, f"{col}:")
+    for val in summary_data[col]:
+        y -= 15
+        c.drawString(120, y, str(val))
+    y -= 25
 c.save()
 pdf = pdf_buffer.getvalue()
-st.download_button("⬇️ Download PDF Report", data=pdf, file_name="ngs_report.pdf", mime="application/pdf")
+st.download_button("⬇️ Download PDF Report", data=pdf, file_name="ngs_full_report.pdf", mime="application/pdf")
 
-st.markdown("### ✅ App successfully restored and regenerated with ROI simulation, risk filtering, regional heatmap, and export features.")
+st.success("✅ App restored with enhanced analysis, ROI simulation, denial map, and export capabilities.")
