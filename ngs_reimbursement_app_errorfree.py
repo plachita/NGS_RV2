@@ -4,6 +4,10 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import seaborn as sns
 import requests
+from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+import base64
 
 # --------------------------
 # Sidebar Inputs
@@ -33,7 +37,6 @@ panel_source = st.radio("Select source:", ["SOPHiA Genetics", "General Category"
 # --------------------------
 st.markdown("## Step 3: Select Specific Panel")
 sophia_panels = {
-    # SOPHiA-specific
     "Solid Tumor – DNA Panel (325 genes)": 325,
     "Solid Tumor – RNA Panel (50 genes)": 50,
     "Solid Tumor – DNA + RNA Panel (375 genes)": 375,
@@ -46,7 +49,6 @@ sophia_panels = {
     "Germline – Pediatric/Undiagnosed Disease Panel (160 genes)": 160,
     "WES – SOPHiA Exome Backbone (19000 genes)": 19000,
     "WGS – SOPHiA Genome Backbone (20000+ genes)": 20000,
-    # General categories
     "General – Solid Tumor DNA Panel (<50 genes)": 45,
     "General – Solid Tumor RNA Panel (<50 genes)": 40,
     "General – Solid Tumor DNA+RNA Panel (<100 genes)": 90,
@@ -58,7 +60,6 @@ sophia_panels = {
     "General – Germline Panel (>100 genes)": 150
 }
 
-# Filter panels based on type + source
 if test_type in ["WES (Whole Exome)", "WGS (Whole Genome)"]:
     available_panels = [p for p in sophia_panels.keys() if test_type.split(" ")[0] in p]
 elif panel_source == "SOPHiA Genetics":
@@ -129,7 +130,11 @@ if selected_panel in risk_notes:
         "Very High": "🚨"
     }.get(risk_level, "⚠️")
     st.markdown(f"### {badge_color} **Risk Level: {risk_level}**")
-    st.info(risk_notes[selected_panel]['billing_note'])
+    billing_note = risk_notes[selected_panel]['billing_note']
+    st.info(billing_note)
+else:
+    risk_level = "Not Specified"
+    billing_note = "Standard documentation applies."
 
 cpt_mapping = {"<50": "81450", "50-100": "81455", ">100": "81455"}
 if panel_gene_count <= 50:
@@ -145,10 +150,7 @@ st.markdown(f"### CPT Code Recommendation: **{suggested_cpt}**")
 # Step 6: Billing Documentation Guidance
 # --------------------------
 st.markdown("## Step 6: Billing Documentation")
-if selected_panel in risk_notes:
-    st.markdown(f"**{selected_panel}** → {risk_notes[selected_panel]['billing_note']}")
-else:
-    st.markdown("Standard documentation applies based on test type and payer policies.\nPlease refer to Z-code and MAC-specific requirements if applicable.")
+st.markdown(f"**{selected_panel}** → {billing_note}")
 
 # --------------------------
 # Step 7: ROI Simulation for WES/WGS Carve-Outs
@@ -186,3 +188,34 @@ st.markdown("## Step 8: Regional Denial Rates")
 st.markdown("Use the map below to educate labs on payer-specific NGS denial risks by region.")
 image_url = "https://files.oaiusercontent.com/file-96mG4d8EkL4DffbdUvhvfuFz?se=2024-06-14T23%3A00%3A00Z&sp=r&sv=2021-08-06&sr=b&sig=mocked_signature"
 st.image(image_url, caption="NGS Denial Rates by Region and Payer Type")
+
+# --------------------------
+# Step 9: Report Download
+# --------------------------
+report_data = {
+    "ZIP Code": zip_code,
+    "Test Strategy": test_strategy,
+    "Test Type": test_type,
+    "Panel": selected_panel,
+    "Risk Level": risk_level,
+    "CPT Code": suggested_cpt,
+    "Billing Note": billing_note,
+    "Date": datetime.now().strftime("%Y-%m-%d")
+}
+
+# CSV Export
+csv_data = pd.DataFrame([report_data])
+csv = csv_data.to_csv(index=False).encode('utf-8')
+st.download_button("⬇️ Download CSV Report", data=csv, file_name="ngs_report.csv", mime="text/csv")
+
+# PDF Export
+pdf_buffer = BytesIO()
+c = canvas.Canvas(pdf_buffer, pagesize=letter)
+c.drawString(100, 750, "NGS Reimbursement Report")
+y = 720
+for k, v in report_data.items():
+    c.drawString(100, y, f"{k}: {v}")
+    y -= 20
+c.save()
+pdf = pdf_buffer.getvalue()
+st.download_button("⬇️ Download PDF Report", data=pdf, file_name="ngs_report.pdf", mime="application/pdf")
