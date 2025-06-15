@@ -85,3 +85,74 @@ if selected_panel in risk_notes:
     st.markdown(f"**{selected_panel}** → {risk_notes[selected_panel]['billing_note']}")
 else:
     st.markdown("Standard documentation applies based on test type and payer policies.\nPlease refer to Z-code and MAC-specific requirements if applicable.")
+
+# CPT code mapping logic
+cpt_mapping = {
+    "<50": "81450",
+    "50-100": "81455",
+    ">100": "81455"
+}
+
+panel_gene_count = sophia_panels[selected_panel]
+if panel_gene_count <= 50:
+    suggested_cpt = cpt_mapping["<50"]
+elif 50 < panel_gene_count <= 100:
+    suggested_cpt = cpt_mapping["50-100"]
+else:
+    suggested_cpt = cpt_mapping[">100"]
+
+st.markdown(f"### CPT Code Recommendation: **{suggested_cpt}**")
+
+# Profitability & ROI simulation (simplified)
+st.markdown("### Step 8: Backbone Strategy Analysis")
+st.write("If using an exome/genome as a backbone, estimate minimum carve-out panels needed for profitability:")
+
+cost_per_backbone = st.number_input("Cost per exome/genome backbone ($):", min_value=0, value=728)
+price_per_panel = st.number_input("Reimbursed amount per carved-out panel ($):", min_value=0, value=600)
+backbone_reimbursed = st.number_input("Optional: Reimbursed amount for backbone ($, if billed):", min_value=0, value=0)
+
+if price_per_panel > 0:
+    if backbone_reimbursed > 0:
+        needed_panels = max(1, round((cost_per_backbone - backbone_reimbursed) / price_per_panel + 1))
+        st.success(f"▶️ To break even: **{needed_panels}** carved-out panel(s) needed per exome/genome **after backbone reimbursement**.")
+    else:
+        needed_panels = round(cost_per_backbone / price_per_panel + 1)
+        st.warning(f"⚠️ To break even (if backbone is not billed): **{needed_panels}** carved-out panel(s) needed per genome/exome.")
+else:
+    st.error("Panel reimbursement must be greater than $0.")
+
+# ROI Visualization
+st.markdown("### ROI Visualization")
+tests = list(range(1, needed_panels + 5))
+roi_values = [((price_per_panel * n) + backbone_reimbursed - cost_per_backbone) for n in tests]
+
+fig, ax = plt.subplots()
+ax.plot(tests, roi_values, marker='o')
+ax.axhline(0, color='gray', linestyle='--')
+ax.set_xlabel("# Carve-out Panels per Exome/Genome")
+ax.set_ylabel("Net Profit ($)")
+ax.set_title("ROI vs. Number of Carve-out Panels")
+
+st.pyplot(fig)
+
+# Export button
+st.markdown("### Download Summary")
+data = {
+    "Selected Test": selected_panel,
+    "Gene Count": panel_gene_count,
+    "Risk Level": risk_notes.get(selected_panel, {}).get("risk_level", "N/A"),
+    "Suggested CPT Code": suggested_cpt,
+    "Break-even Panels (No Backbone Reimbursement)": round(cost_per_backbone / price_per_panel + 1),
+    "Break-even Panels (With Backbone Reimbursement)": max(1, round((cost_per_backbone - backbone_reimbursed) / price_per_panel + 1))
+}
+df_export = pd.DataFrame([data])
+
+buffer = BytesIO()
+df_export.to_excel(buffer, index=False, engine='openpyxl')
+buffer.seek(0)
+st.download_button(
+    label="📥 Download Reimbursement Summary (Excel)",
+    data=buffer,
+    file_name="ngs_reimbursement_summary.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
