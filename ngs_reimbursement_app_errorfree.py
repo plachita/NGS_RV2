@@ -110,6 +110,9 @@ risk_notes = {
 filter_risk = st.multiselect("Filter panels by risk level:", options=["Low", "Medium", "High", "Very High"])
 filtered_panels = [p for p in available_panels if not filter_risk or risk_notes.get(p, {}).get("risk_level") in filter_risk]
 
+# --------------------------
+# Display Analysis
+# --------------------------
 for selected_panel in selected_panels:
     if selected_panel not in filtered_panels:
         st.warning(f"{selected_panel} does not meet current risk filter.")
@@ -143,8 +146,33 @@ for selected_panel in selected_panels:
     st.markdown(f"**CPT Code Recommendation: {suggested_cpt}**")
     st.markdown(f"**Billing Note:** {billing_note}")
 
+    # ROI Simulation for Carve-out
+    if test_strategy.startswith("Carve-out"):
+        st.markdown("### ROI Simulation for Carve-out")
+        cost = st.number_input(f"{selected_panel} – Total Cost per WES/WGS Test ($):", min_value=500, max_value=3000, value=1200)
+        reimbursement_per_panel = st.number_input(f"{selected_panel} – Avg Reimbursement per Carve-Out Panel ($):", min_value=100, max_value=2000, value=400)
+        max_panels = st.slider(f"{selected_panel} – Number of Panel Reports:", min_value=1, max_value=10, value=5)
+
+        break_even_panels = cost / reimbursement_per_panel
+        actual_revenue = [n * reimbursement_per_panel for n in range(1, max_panels + 1)]
+        profit = [rev - cost for rev in actual_revenue]
+
+        df = pd.DataFrame({
+            "# Panels": list(range(1, max_panels + 1)),
+            "Revenue ($)": actual_revenue,
+            "Profit ($)": profit
+        })
+
+        fig, ax = plt.subplots()
+        sns.barplot(data=df, x="# Panels", y="Profit ($)", ax=ax, palette="coolwarm")
+        ax.axhline(0, color='gray', linestyle='--')
+        ax.set_title("Profitability Based on Carve-Out Strategy")
+        st.pyplot(fig)
+
+        st.markdown(f"➡️ To break even, you need **{break_even_panels:.1f}** panel reports per sample.")
+
 # --------------------------
-# Step 8: Regional Denial Rates (Dynamic Map)
+# Step 8: Regional Denial Rates
 # --------------------------
 st.markdown("## Step 8: Regional Denial Rates")
 st.markdown("Use the interactive map below to educate labs on payer-specific NGS denial risks by region.")
@@ -167,4 +195,29 @@ fig = px.choropleth(
 
 st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("### ✅ App successfully restored and regenerated with all available functionality.")
+# --------------------------
+# Step 9: Export Summary Report
+# --------------------------
+report_data = {
+    "ZIP Code": zip_code,
+    "Test Strategy": test_strategy,
+    "Test Type": test_type,
+    "Panels Selected": ", ".join(selected_panels)
+}
+
+csv_data = pd.DataFrame([report_data])
+csv = csv_data.to_csv(index=False).encode('utf-8')
+st.download_button("⬇️ Download CSV Report", data=csv, file_name="ngs_report.csv", mime="text/csv")
+
+pdf_buffer = BytesIO()
+c = canvas.Canvas(pdf_buffer, pagesize=letter)
+c.drawString(100, 750, "NGS Reimbursement Report")
+y = 720
+for k, v in report_data.items():
+    c.drawString(100, y, f"{k}: {v}")
+    y -= 20
+c.save()
+pdf = pdf_buffer.getvalue()
+st.download_button("⬇️ Download PDF Report", data=pdf, file_name="ngs_report.pdf", mime="application/pdf")
+
+st.markdown("### ✅ App successfully restored and regenerated with ROI simulation, risk filtering, regional heatmap, and export features.")
