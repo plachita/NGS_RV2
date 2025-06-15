@@ -15,7 +15,7 @@ import plotly.express as px
 # --------------------------
 st.sidebar.markdown("### Optional Inputs")
 zip_code = st.sidebar.text_input("Enter ZIP Code (for regional denial context):")
-test_strategy = st.sidebar.radio("Test Strategy:", ["Panel Only", "Carve-out from WES", "Carve-out from WGS"])
+test_strategy = st.sidebar.radio("Test Strategy:", ["Panel Only", "Carve-out from WES", "Carve-out from WGS", "Carve-out from Large Panel"])
 
 # --------------------------
 # Step 1: Select Test Type
@@ -150,7 +150,7 @@ for selected_panel in selected_panels:
 
     if test_strategy.startswith("Carve-out"):
         st.markdown("### ROI Simulation for Carve-out")
-        cost = st.number_input(f"{selected_panel} – Total Cost per WES/WGS Test ($):", min_value=500, max_value=3000, value=1200)
+        cost = st.number_input(f"{selected_panel} – Total Cost of Backbone Test ($):", min_value=500, max_value=3000, value=1200)
         reimbursement_per_panel = st.number_input(f"{selected_panel} – Avg Reimbursement per Carve-Out Panel ($):", min_value=100, max_value=2000, value=400)
         max_panels = st.slider(f"{selected_panel} – Number of Panel Reports:", min_value=1, max_value=10, value=5)
 
