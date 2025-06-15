@@ -92,7 +92,11 @@ if selected_panel not in filtered_panels:
 # Step 5: Risk Badge and CPT Code Recommendation
 # --------------------------
 st.markdown("## Step 5: Risk and CPT Guidance")
-panel_gene_count = sophia_panels[selected_panel]
+if selected_panel in sophia_panels:
+    panel_gene_count = sophia_panels[selected_panel]
+else:
+    st.error("Selected panel is not recognized. Please check your selection.")
+    st.stop()
 
 if selected_panel in risk_notes:
     risk_level = risk_notes[selected_panel]['risk_level']
