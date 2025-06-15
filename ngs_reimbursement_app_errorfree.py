@@ -50,7 +50,13 @@ sophia_panels = {
 }
 
 # Filter panels based on type + source
-available_panels = [p for p in sophia_panels.keys() if test_type.split(" –")[0] in p and (panel_source in p or panel_source == "General Category" and "General" in p)]
+if panel_source == "SOPHiA Genetics":
+    available_panels = [p for p in sophia_panels.keys() if test_type.split(" –")[0] in p and "General" not in p]
+elif panel_source == "General Category":
+    available_panels = [p for p in sophia_panels.keys() if test_type.split(" –")[0] in p and "General" in p]
+else:
+    available_panels = list(sophia_panels.keys())
+
 selected_panel = st.selectbox("Available Panels:", available_panels)
 
 # --------------------------
