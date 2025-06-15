@@ -6,6 +6,12 @@ import seaborn as sns
 import requests
 
 # --------------------------
+# Step 0: Optional ZIP Code for Payer Region
+# --------------------------
+st.sidebar.markdown("### Optional Inputs")
+zip_code = st.sidebar.text_input("Enter ZIP Code (for future regional guidance):")
+
+# --------------------------
 # Step 1: Select Test Category
 # --------------------------
 st.markdown("## Step 1: Select Test Type")
@@ -16,15 +22,23 @@ test_type = st.selectbox("Choose a test type:", [
 ])
 
 # --------------------------
-# Step 2: Choose SOPHiA or General
+# Step 2: Select Testing Strategy
 # --------------------------
-st.markdown("## Step 2: Select Panel Source")
+st.markdown("## Step 2: Test Strategy")
+test_strategy = st.radio("How is this test being run?", [
+    "Panel Only", "Carve-out from WES", "Carve-out from WGS"
+])
+
+# --------------------------
+# Step 3: Choose SOPHiA or General
+# --------------------------
+st.markdown("## Step 3: Select Panel Source")
 panel_source = st.radio("Select source:", ["SOPHiA Genetics", "General Category"])
 
 # --------------------------
-# Step 3: Select Panel
+# Step 4: Select Panel
 # --------------------------
-st.markdown("## Step 3: Select Specific Panel")
+st.markdown("## Step 4: Select Specific Panel")
 sophia_panels = {
     # SOPHiA-specific
     "Solid Tumor – DNA Panel (325 genes)": 325,
@@ -64,11 +78,10 @@ else:
 selected_panel = st.selectbox("Available Panels:", available_panels)
 
 # --------------------------
-# Step 4: Filter by Risk Level
+# Step 5: Risk Filter
 # --------------------------
-st.markdown("## Step 4: Risk Filter")
+st.markdown("## Step 5: Risk Filter")
 risk_notes = {
-    # Germline
     "General – Germline Panel (50-100 genes)": {
         "risk_level": "Medium",
         "billing_note": "Consider billing with 81455. Denial risk may increase if policy requires <50 genes. Ensure strong documentation of medical necessity."
@@ -77,7 +90,6 @@ risk_notes = {
         "risk_level": "High",
         "billing_note": "Most commercial payers do not cover panels >50 genes. Must use 81455. Recommend Z-code registration and MAC pre-check."
     },
-    # Solid Tumor
     "Solid Tumor – DNA Panel (325 genes)": {
         "risk_level": "High",
         "billing_note": "Panels >300 genes typically require billing with 81455. Ensure strong rationale and clinical documentation to justify extent of profiling."
@@ -86,12 +98,10 @@ risk_notes = {
         "risk_level": "High",
         "billing_note": "High complexity assay – may not be reimbursed by all commercial payers. Use 81455 and document clearly why combined profiling was medically necessary."
     },
-    # Liquid Biopsy
     "Liquid Biopsy – ctDNA (500 genes)": {
         "risk_level": "Very High",
         "billing_note": "Very few payers reimburse for ctDNA panels >300 genes. Consider alternatives or seek pre-authorization. Billing typically requires 81455."
     },
-    # WES/WGS
     "WES – SOPHiA Exome Backbone (19000 genes)": {
         "risk_level": "Very High",
         "billing_note": "Exome sequencing is rarely reimbursed as first-line test. Pairing with carved-out panels may help justify clinical utility and improve ROI."
@@ -108,9 +118,9 @@ if selected_panel not in filtered_panels:
     st.warning("Selected panel does not meet risk filter.")
 
 # --------------------------
-# Step 5: Risk Badge and CPT Code Recommendation
+# Step 6: Risk & CPT Code Guidance
 # --------------------------
-st.markdown("## Step 5: Risk and CPT Guidance")
+st.markdown("## Step 6: Risk and CPT Guidance")
 if selected_panel in sophia_panels:
     panel_gene_count = sophia_panels[selected_panel]
 else:
@@ -139,19 +149,19 @@ else:
 st.markdown(f"### CPT Code Recommendation: **{suggested_cpt}**")
 
 # --------------------------
-# Step 6: Billing Documentation Guidance
+# Step 7: Billing Documentation Guidance
 # --------------------------
-st.markdown("## Step 6: Billing Documentation")
+st.markdown("## Step 7: Billing Documentation")
 if selected_panel in risk_notes:
     st.markdown(f"**{selected_panel}** → {risk_notes[selected_panel]['billing_note']}")
 else:
     st.markdown("Standard documentation applies based on test type and payer policies.\nPlease refer to Z-code and MAC-specific requirements if applicable.")
 
 # --------------------------
-# Step 7: ROI Simulation for WES/WGS Carve-Outs
+# Step 8: ROI Simulation for WES/WGS Carve-Outs
 # --------------------------
-if test_type in ["WES (Whole Exome)", "WGS (Whole Genome)"]:
-    st.markdown("## Step 7: ROI Simulation – Carve-Out Modeling")
+if test_strategy.startswith("Carve-out"):
+    st.markdown("## Step 8: ROI Simulation – Carve-Out Modeling")
     st.markdown("Simulate how many carved-out panels per sample are needed to make WES or WGS cost-effective.")
 
     cost = st.number_input("Total Cost per WES/WGS Test ($):", min_value=500, max_value=3000, value=1200)
@@ -174,4 +184,4 @@ if test_type in ["WES (Whole Exome)", "WGS (Whole Genome)"]:
     ax.set_title("Profitability Based on Panel Carve-Outs")
     st.pyplot(fig)
 
-    st.markdown(f"To break even, you need approximately **{break_even_panels:.1f}** panel reports per {test_type}.")
+    st.markdown(f"To break even, you need approximately **{break_even_panels:.1f}** panel reports per {test_strategy}.")
