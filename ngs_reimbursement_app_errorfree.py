@@ -3,6 +3,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
 
+# Define Sophia panels and their gene counts
+sophia_panels = {
+    "Solid Tumor – DNA Panel (325 genes)": 325,
+    "Solid Tumor – RNA Panel (50 genes)": 50,
+    "Solid Tumor – DNA + RNA Panel (375 genes)": 375,
+    "Hematologic – DNA Panel (65 genes)": 65,
+    "Hematologic – RNA Panel (50 genes)": 50,
+    "Hematologic – DNA + RNA Panel (115 genes)": 115,
+    "Liquid Biopsy – ctDNA (500 genes)": 500,
+    "Germline – Hereditary Cancer Panel (47 genes)": 47,
+    "Germline – Cardiovascular/Metabolic Panel (60 genes)": 60,
+    "Germline – Pediatric/Undiagnosed Disease Panel (160 genes)": 160
+}
+
 # App title
 st.title("NGS Reimbursement Optimization Tool")
 
@@ -16,20 +30,10 @@ testing_mode = st.sidebar.radio("Select Scenario", [
 
 # Step 1: Test Info Section
 st.header("Step 1: Test Information")
-test_type = st.selectbox("Select Test Type", [
-    "Solid Tumor – DNA Panel (325 genes)",
-    "Solid Tumor – RNA Panel (50 genes)",
-    "Solid Tumor – DNA + RNA Panel (375 genes)",
-    "Hematologic – DNA Panel (65 genes)",
-    "Hematologic – RNA Panel (50 genes)",
-    "Hematologic – DNA + RNA Panel (115 genes)",
-    "Liquid Biopsy – ctDNA (500 genes)",
-    "Germline – Hereditary Cancer Panel (47 genes)",
-    "Germline – Cardiovascular/Metabolic Panel (60 genes)",
-    "Germline – Pediatric/Undiagnosed Disease Panel (160 genes)"
-])
+test_type = st.selectbox("Select Test Type", list(sophia_panels.keys()))
 
-gene_count = st.slider("Number of Genes in Panel", 1, 500, 50)
+default_gene_count = sophia_panels.get(test_type, 50)
+gene_count = st.slider("Number of Genes in Panel", 1, 500, default_gene_count)
 lab_cost = st.number_input("Enter Total Lab Cost per Sample ($)", min_value=0.0, value=350.0)
 inpatient_pct = st.slider("% of Inpatient Volume (14-Day Rule Applies)", 0, 100, 30)
 
