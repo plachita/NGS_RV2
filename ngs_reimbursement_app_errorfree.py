@@ -88,15 +88,18 @@ testing_mode = st.sidebar.radio("Select Scenario", [
 st.header("Step 1: Test Information")
 test_type = st.selectbox("Select Test Type", list(sophia_panels.keys()))
 
-# Optional: allow multi-panel comparison
 compare_panels = st.checkbox("Compare Multiple Panels")
-selected_panels = [test_type]
+
 if compare_panels:
     selected_panels = st.multiselect("Select Panels to Compare", list(sophia_panels.keys()), default=[test_type])
+    panel_gene_counts = {panel: sophia_panels.get(panel, 50) for panel in selected_panels}
+else:
+    selected_panels = [test_type]
+    selected_gene_count = st.slider("Number of Genes in Panel", 1, 500, sophia_panels.get(test_type, 50))
+    panel_gene_counts = {test_type: selected_gene_count}
 
 payer_policy = st.selectbox("Select Payer Policy", ["CMS", "BCBS", "UnitedHealthcare"])
 
-# Logic table for payer-specific thresholds
 payer_thresholds = {
     "CMS": 50,
     "BCBS": 50,
@@ -107,14 +110,7 @@ risk_levels = []
 reimbursement_values = []
 roi_values = []
 
-# Step 2-3 logic is computed per panel in this loop
-for panel in selected_panels:
-    default_gene_count = sophia_panels.get(panel, 50)
-    gene_count = default_gene_count
-    if not compare_panels:
-        gene_count = st.slider("Number of Genes in Panel", 1, 500, default_gene_count)
-
-    # Determine CPT Code
+for panel, gene_count in panel_gene_counts.items():
     if "Liquid Biopsy" in panel:
         cpt_code = "0326U"
     elif gene_count > 50:
@@ -124,7 +120,6 @@ for panel in selected_panels:
     else:
         cpt_code = "81445"
 
-    # Base Rates
     cpt_base_rates = {"81445": 600, "81450": 750, "81455": 1200, "0326U": 2800}
     base_rate = cpt_base_rates.get(cpt_code, 600)
 
@@ -132,7 +127,6 @@ for panel in selected_panels:
     estimated_reimbursement = base_rate * (1 - (denial_rate / 100))
     reimbursement_values.append(estimated_reimbursement)
 
-    # Denial Risk
     if gene_count > payer_thresholds[payer_policy]:
         risk = "High"
     elif gene_count > 100:
@@ -141,7 +135,6 @@ for panel in selected_panels:
         risk = "Low"
     risk_levels.append(risk)
 
-    # ROI Estimation (e.g., 250 cost)
     lab_cost = 250
     roi = round((estimated_reimbursement - lab_cost) / lab_cost, 2)
     roi_values.append(roi)
@@ -155,14 +148,12 @@ ax.set_title("Estimated Reimbursement and Risk")
 ax.set_ylabel("$ Reimbursement")
 ax.set_xticklabels(selected_panels, rotation=45, ha="right")
 
-# Annotate bars
 for bar, risk, reimb, roi in zip(bars, risk_levels, reimbursement_values, roi_values):
     ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 50,
             f"{risk} Risk\n${reimb:,.0f}\nROI: {roi}", ha='center', fontsize=8, fontweight='bold')
 
 st.pyplot(fig)
 
-# Tooltip education
 if st.checkbox("Explain Risk Levels"):
     st.markdown("**Risk Level Explanation:**")
     st.markdown("- **Low Risk**: Gene count ≤ 50 (aligned with most payer thresholds)")
@@ -184,9 +175,8 @@ st.markdown(f"**MAC Policy for {inferred_mac}:**")
 st.markdown(f"- Gene Limit: {mac_max} genes")
 st.markdown(f"- Preferred CPT Code: {mac_required_code}")
 
-if gene_count > mac_max:
+if panel_gene_counts[test_type] > mac_max:
     st.warning(f"This panel exceeds the MAC gene limit. Consider splitting or downcoding cautiously.")
 
-# Future Step: LCD/NCD links and integration
 if st.checkbox("Show LCD/NCD Reference (Coming Soon)"):
     st.markdown("[Palmetto LCD L38764](https://www.cms.gov/medicare-coverage-database/view/lcd.aspx?lcdid=38764)")
