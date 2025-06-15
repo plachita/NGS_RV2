@@ -17,16 +17,16 @@ testing_mode = st.sidebar.radio("Select Scenario", [
 # Step 1: Test Info Section
 st.header("Step 1: Test Information")
 test_type = st.selectbox("Select Test Type", [
-    "Solid Tumor – DNA Panel",
-    "Solid Tumor – RNA Panel",
-    "Solid Tumor – DNA + RNA Panel",
-    "Hematologic – DNA Panel",
-    "Hematologic – RNA Panel",
-    "Hematologic – DNA + RNA Panel",
-    "Liquid Biopsy – ctDNA",
-    "Germline – Hereditary Cancer Panel",
-    "Germline – Cardiovascular/Metabolic Panel",
-    "Germline – Pediatric/Undiagnosed Disease Panel"
+    "Solid Tumor – DNA Panel (325 genes)",
+    "Solid Tumor – RNA Panel (50 genes)",
+    "Solid Tumor – DNA + RNA Panel (375 genes)",
+    "Hematologic – DNA Panel (65 genes)",
+    "Hematologic – RNA Panel (50 genes)",
+    "Hematologic – DNA + RNA Panel (115 genes)",
+    "Liquid Biopsy – ctDNA (500 genes)",
+    "Germline – Hereditary Cancer Panel (47 genes)",
+    "Germline – Cardiovascular/Metabolic Panel (60 genes)",
+    "Germline – Pediatric/Undiagnosed Disease Panel (160 genes)"
 ])
 
 gene_count = st.slider("Number of Genes in Panel", 1, 500, 50)
