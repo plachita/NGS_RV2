@@ -6,39 +6,32 @@ import seaborn as sns
 import requests
 
 # --------------------------
-# Step 0: Optional ZIP Code for Payer Region
+# Sidebar Inputs
 # --------------------------
 st.sidebar.markdown("### Optional Inputs")
 zip_code = st.sidebar.text_input("Enter ZIP Code (for future regional guidance):")
+test_strategy = st.sidebar.radio("Test Strategy:", ["Panel Only", "Carve-out from WES", "Carve-out from WGS"])
 
 # --------------------------
-# Step 1: Select Test Category
+# Step 1: Select Test Type
 # --------------------------
 st.markdown("## Step 1: Select Test Type")
 test_type = st.selectbox("Choose a test type:", [
     "Solid Tumor – DNA", "Solid Tumor – RNA", "Solid Tumor – DNA + RNA",
     "Hematologic – DNA", "Hematologic – RNA", "Hematologic – DNA + RNA",
-    "Liquid Biopsy", "Germline", "WES (Whole Exome)", "WGS (Whole Genome)", "General Test Category"
+    "Liquid Biopsy", "Germline", "WES (Whole Exome)", "WGS (Whole Genome)"
 ])
 
 # --------------------------
-# Step 2: Select Testing Strategy
+# Step 2: Select Panel Source
 # --------------------------
-st.markdown("## Step 2: Test Strategy")
-test_strategy = st.radio("How is this test being run?", [
-    "Panel Only", "Carve-out from WES", "Carve-out from WGS"
-])
-
-# --------------------------
-# Step 3: Choose SOPHiA or General
-# --------------------------
-st.markdown("## Step 3: Select Panel Source")
+st.markdown("## Step 2: Select Panel Source")
 panel_source = st.radio("Select source:", ["SOPHiA Genetics", "General Category"])
 
 # --------------------------
-# Step 4: Select Panel
+# Step 3: Select Specific Panel
 # --------------------------
-st.markdown("## Step 4: Select Specific Panel")
+st.markdown("## Step 3: Select Specific Panel")
 sophia_panels = {
     # SOPHiA-specific
     "Solid Tumor – DNA Panel (325 genes)": 325,
@@ -78,9 +71,9 @@ else:
 selected_panel = st.selectbox("Available Panels:", available_panels)
 
 # --------------------------
-# Step 5: Risk Filter
+# Step 4: Risk Filter
 # --------------------------
-st.markdown("## Step 5: Risk Filter")
+st.markdown("## Step 4: Risk Filter")
 risk_notes = {
     "General – Germline Panel (50-100 genes)": {
         "risk_level": "Medium",
@@ -118,9 +111,9 @@ if selected_panel not in filtered_panels:
     st.warning("Selected panel does not meet risk filter.")
 
 # --------------------------
-# Step 6: Risk & CPT Code Guidance
+# Step 5: Risk & CPT Code Guidance
 # --------------------------
-st.markdown("## Step 6: Risk and CPT Guidance")
+st.markdown("## Step 5: Risk and CPT Guidance")
 if selected_panel in sophia_panels:
     panel_gene_count = sophia_panels[selected_panel]
 else:
@@ -149,19 +142,19 @@ else:
 st.markdown(f"### CPT Code Recommendation: **{suggested_cpt}**")
 
 # --------------------------
-# Step 7: Billing Documentation Guidance
+# Step 6: Billing Documentation Guidance
 # --------------------------
-st.markdown("## Step 7: Billing Documentation")
+st.markdown("## Step 6: Billing Documentation")
 if selected_panel in risk_notes:
     st.markdown(f"**{selected_panel}** → {risk_notes[selected_panel]['billing_note']}")
 else:
     st.markdown("Standard documentation applies based on test type and payer policies.\nPlease refer to Z-code and MAC-specific requirements if applicable.")
 
 # --------------------------
-# Step 8: ROI Simulation for WES/WGS Carve-Outs
+# Step 7: ROI Simulation for WES/WGS Carve-Outs
 # --------------------------
 if test_strategy.startswith("Carve-out"):
-    st.markdown("## Step 8: ROI Simulation – Carve-Out Modeling")
+    st.markdown("## Step 7: ROI Simulation – Carve-Out Modeling")
     st.markdown("Simulate how many carved-out panels per sample are needed to make WES or WGS cost-effective.")
 
     cost = st.number_input("Total Cost per WES/WGS Test ($):", min_value=500, max_value=3000, value=1200)
