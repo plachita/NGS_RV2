@@ -12,7 +12,7 @@ st.markdown("## Step 1: Select Test Type")
 test_type = st.selectbox("Choose a test type:", [
     "Solid Tumor – DNA", "Solid Tumor – RNA", "Solid Tumor – DNA + RNA",
     "Hematologic – DNA", "Hematologic – RNA", "Hematologic – DNA + RNA",
-    "Liquid Biopsy", "Germline", "General Test Category"
+    "Liquid Biopsy", "Germline", "WES (Whole Exome)", "WGS (Whole Genome)", "General Test Category"
 ])
 
 # --------------------------
@@ -37,6 +37,8 @@ sophia_panels = {
     "Germline – Hereditary Cancer Panel (47 genes)": 47,
     "Germline – Cardiovascular/Metabolic Panel (60 genes)": 60,
     "Germline – Pediatric/Undiagnosed Disease Panel (160 genes)": 160,
+    "WES – SOPHiA Exome Backbone (19000 genes)": 19000,
+    "WGS – SOPHiA Genome Backbone (20000+ genes)": 20000,
     # General categories
     "General – Solid Tumor DNA Panel (<50 genes)": 45,
     "General – Solid Tumor RNA Panel (<50 genes)": 40,
@@ -50,7 +52,9 @@ sophia_panels = {
 }
 
 # Filter panels based on type + source
-if panel_source == "SOPHiA Genetics":
+if test_type in ["WES (Whole Exome)", "WGS (Whole Genome)"]:
+    available_panels = [p for p in sophia_panels.keys() if test_type.split(" ")[0] in p]
+elif panel_source == "SOPHiA Genetics":
     available_panels = [p for p in sophia_panels.keys() if test_type.split(" –")[0] in p and "General" not in p]
 elif panel_source == "General Category":
     available_panels = [p for p in sophia_panels.keys() if test_type.split(" –")[0] in p and "General" in p]
@@ -86,6 +90,15 @@ risk_notes = {
     "Liquid Biopsy – ctDNA (500 genes)": {
         "risk_level": "Very High",
         "billing_note": "Very few payers reimburse for ctDNA panels >300 genes. Consider alternatives or seek pre-authorization. Billing typically requires 81455."
+    },
+    # WES/WGS
+    "WES – SOPHiA Exome Backbone (19000 genes)": {
+        "risk_level": "Very High",
+        "billing_note": "Exome sequencing is rarely reimbursed as first-line test. Pairing with carved-out panels may help justify clinical utility and improve ROI."
+    },
+    "WGS – SOPHiA Genome Backbone (20000+ genes)": {
+        "risk_level": "Very High",
+        "billing_note": "Whole genome sequencing is high-cost and low reimbursement unless bundled with additional diagnostic or carved-out reportable panels."
     }
 }
 
@@ -133,3 +146,32 @@ if selected_panel in risk_notes:
     st.markdown(f"**{selected_panel}** → {risk_notes[selected_panel]['billing_note']}")
 else:
     st.markdown("Standard documentation applies based on test type and payer policies.\nPlease refer to Z-code and MAC-specific requirements if applicable.")
+
+# --------------------------
+# Step 7: ROI Simulation for WES/WGS Carve-Outs
+# --------------------------
+if test_type in ["WES (Whole Exome)", "WGS (Whole Genome)"]:
+    st.markdown("## Step 7: ROI Simulation – Carve-Out Modeling")
+    st.markdown("Simulate how many carved-out panels per sample are needed to make WES or WGS cost-effective.")
+
+    cost = st.number_input("Total Cost per WES/WGS Test ($):", min_value=500, max_value=3000, value=1200)
+    reimbursement_per_panel = st.number_input("Average Reimbursement per Carve-Out Panel ($):", min_value=100, max_value=2000, value=400)
+    max_panels = st.slider("Number of Panel Reports per Backbone Test:", min_value=1, max_value=10, value=5)
+
+    break_even_panels = cost / reimbursement_per_panel
+    actual_revenue = [n * reimbursement_per_panel for n in range(1, max_panels + 1)]
+    profit = [rev - cost for rev in actual_revenue]
+
+    df = pd.DataFrame({
+        "# Panels": list(range(1, max_panels + 1)),
+        "Revenue ($)": actual_revenue,
+        "Profit ($)": profit
+    })
+
+    fig, ax = plt.subplots()
+    sns.barplot(data=df, x="# Panels", y="Profit ($)", ax=ax, palette="coolwarm")
+    ax.axhline(0, color='gray', linestyle='--')
+    ax.set_title("Profitability Based on Panel Carve-Outs")
+    st.pyplot(fig)
+
+    st.markdown(f"To break even, you need approximately **{break_even_panels:.1f}** panel reports per {test_type}.")
