@@ -56,13 +56,14 @@ profit_margin = estimated_reimbursement - lab_cost
 st.info(f"Estimated Reimbursement: ${estimated_reimbursement:,.2f}")
 st.info(f"Estimated Profit per Test: ${profit_margin:,.2f}")
 
-# Step 4: WES/WGS Carve-Out Profitability
-st.header("Step 4: WES/WGS Carve-Out Calculator")
+# Step 4: WES/WGS Germline Carve-Out Profitability
+st.header("Step 4: WES/WGS Germline Carve-Out Calculator")
 if testing_mode in ["Whole Exome Sequencing (WES)", "Whole Genome Sequencing (WGS)"]:
+    st.markdown("**Note:** Most carve-out strategies using WES/WGS involve *germline hereditary panels* (e.g., cancer, cardiomyopathy). These panels are billed separately but extracted from the exome/genome backbone.")
     backbone_cost = 800 if testing_mode == "Whole Exome Sequencing (WES)" else 1300
     carveout_margin = profit_margin if profit_margin > 0 else 100
     required_panels = backbone_cost / carveout_margin
-    st.warning(f"You need at least {required_panels:.1f} carve-out panels per {testing_mode} to break even.")
+    st.warning(f"You need at least {required_panels:.1f} germline carve-out panels per {testing_mode} to break even.")
 
 # Step 5: Strategy Recommendation
 st.header("Step 5: Recommended Strategy")
@@ -70,6 +71,9 @@ if testing_mode == "Panel-Only Testing" and estimated_reimbursement < lab_cost:
     st.error("Warning: Current panel strategy may not be profitable. Consider revising panel content or switching to WES/WGS.")
 else:
     st.success("Panel design appears cost-effective under current assumptions.")
+
+if testing_mode in ["Whole Exome Sequencing (WES)", "Whole Genome Sequencing (WGS)"] and profit_margin > 0:
+    st.markdown("✅ Based on your cost assumptions, WES/WGS is likely sustainable with germline panel carve-outs.")
 
 # Carve-out logic toggle
 toggle_strategy = st.radio("Carve-Out Strategy Source", [
@@ -135,6 +139,7 @@ if uploaded_file:
     st.markdown("- ZB123: Myeloid 50-gene panel (DNA only)")
     st.markdown("- ZC456: Fusion panel (RNA-based)")
     st.markdown("- ZD789: Combined DNA + RNA tumor profiling")
+    st.markdown("- ZE321: Germline hereditary cancer panel carved from WES")
     st.markdown("Z-codes must be registered through the DEX™ Diagnostics Exchange and associated with a valid CPT code. Failure to submit a Z-code may result in **automatic claim denial**.")
     st.markdown("For more info: [DEX Z-code registry](https://app.dexzcodes.com/public/search)")
 
