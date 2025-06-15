@@ -185,9 +185,28 @@ if test_strategy.startswith("Carve-out"):
 # Step 8: Regional Denial Rates Visualization
 # --------------------------
 st.markdown("## Step 8: Regional Denial Rates")
-st.markdown("Use the map below to educate labs on payer-specific NGS denial risks by region.")
-image_url = "https://files.oaiusercontent.com/file-96mG4d8EkL4DffbdUvhvfuFz?se=2024-06-14T23%3A00%3A00Z&sp=r&sv=2021-08-06&sr=b&sig=mocked_signature"
-st.image(image_url, caption="NGS Denial Rates by Region and Payer Type")
+st.markdown("Use the interactive map below to educate labs on payer-specific NGS denial risks by region.")
+
+import plotly.express as px
+
+# Sample data – replace with real regional data when available
+state_data = {
+    "State": ["California", "Texas", "Florida", "New York", "Illinois", "Georgia", "Pennsylvania", "Ohio", "North Carolina", "Michigan"],
+    "Denial Rate (%)": [12, 18, 15, 10, 17, 14, 13, 16, 11, 19]
+}
+df_states = pd.DataFrame(state_data)
+
+fig = px.choropleth(
+    df_states,
+    locations="State",
+    locationmode="USA-states",
+    color="Denial Rate (%)",
+    color_continuous_scale="Reds",
+    scope="usa",
+    title="Estimated NGS Denial Rates by State"
+)
+
+st.plotly_chart(fig, use_container_width=True)
 
 # --------------------------
 # Step 9: Report Download
