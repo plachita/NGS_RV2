@@ -23,7 +23,10 @@ test_type = st.selectbox("Select Test Type", [
     "Hematologic – DNA Panel",
     "Hematologic – RNA Panel",
     "Hematologic – DNA + RNA Panel",
-    "Liquid Biopsy – ctDNA"
+    "Liquid Biopsy – ctDNA",
+    "Germline – Hereditary Cancer Panel",
+    "Germline – Cardiovascular/Metabolic Panel",
+    "Germline – Pediatric/Undiagnosed Disease Panel"
 ])
 
 gene_count = st.slider("Number of Genes in Panel", 1, 500, 50)
@@ -41,6 +44,14 @@ else:
 
 if "Liquid Biopsy" in test_type:
     cpt_code = "0326U"  # Placeholder for FDA-cleared ctDNA assays
+
+if "Germline" in test_type:
+    if gene_count > 50:
+        cpt_code = "81455"
+    elif gene_count > 5:
+        cpt_code = "81450"
+    else:
+        cpt_code = "81445"
 
 st.success(f"Suggested CPT Code: {cpt_code}")
 
