@@ -5,7 +5,26 @@ from io import BytesIO
 import seaborn as sns
 import requests
 
-# Define Sophia panels and general test categories
+# --------------------------
+# Step 1: Select Test Category
+# --------------------------
+st.markdown("## Step 1: Select Test Type")
+test_type = st.selectbox("Choose a test type:", [
+    "Solid Tumor – DNA", "Solid Tumor – RNA", "Solid Tumor – DNA + RNA",
+    "Hematologic – DNA", "Hematologic – RNA", "Hematologic – DNA + RNA",
+    "Liquid Biopsy", "Germline", "General Test Category"
+])
+
+# --------------------------
+# Step 2: Choose SOPHiA or General
+# --------------------------
+st.markdown("## Step 2: Select Panel Source")
+panel_source = st.radio("Select source:", ["SOPHiA Genetics", "General Category"])
+
+# --------------------------
+# Step 3: Select Panel
+# --------------------------
+st.markdown("## Step 3: Select Specific Panel")
 sophia_panels = {
     # SOPHiA-specific
     "Solid Tumor – DNA Panel (325 genes)": 325,
@@ -30,7 +49,14 @@ sophia_panels = {
     "General – Germline Panel (>100 genes)": 150
 }
 
-# Risk thresholds and billing notes
+# Filter panels based on type + source
+available_panels = [p for p in sophia_panels.keys() if test_type.split(" –")[0] in p and (panel_source in p or panel_source == "General Category" and "General" in p)]
+selected_panel = st.selectbox("Available Panels:", available_panels)
+
+# --------------------------
+# Step 4: Filter by Risk Level
+# --------------------------
+st.markdown("## Step 4: Risk Filter")
 risk_notes = {
     # Germline
     "General – Germline Panel (50-100 genes)": {
@@ -57,17 +83,17 @@ risk_notes = {
     }
 }
 
-# Add filter for risk level
 filter_risk = st.multiselect("Filter panels by risk level:", options=["Low", "Medium", "High", "Very High"])
+filtered_panels = [p for p in available_panels if not filter_risk or risk_notes.get(p, {}).get("risk_level") in filter_risk]
+if selected_panel not in filtered_panels:
+    st.warning("Selected panel does not meet risk filter.")
 
-# Filter panel list if filter applied
-filtered_panels = [panel for panel in sophia_panels.keys()
-                   if not filter_risk or risk_notes.get(panel, {}).get("risk_level") in filter_risk]
+# --------------------------
+# Step 5: Risk Badge and CPT Code Recommendation
+# --------------------------
+st.markdown("## Step 5: Risk and CPT Guidance")
+panel_gene_count = sophia_panels[selected_panel]
 
-# Display risk notes in UI
-selected_panel = st.selectbox("Select a test panel:", filtered_panels)
-
-# Display color-coded badge with risk level
 if selected_panel in risk_notes:
     risk_level = risk_notes[selected_panel]['risk_level']
     badge_color = {
@@ -79,21 +105,7 @@ if selected_panel in risk_notes:
     st.markdown(f"### {badge_color} **Risk Level: {risk_level}**")
     st.info(risk_notes[selected_panel]['billing_note'])
 
-# Step 7: Billing Documentation Section
-st.markdown("### Step 7: Billing Documentation Guidance")
-if selected_panel in risk_notes:
-    st.markdown(f"**{selected_panel}** → {risk_notes[selected_panel]['billing_note']}")
-else:
-    st.markdown("Standard documentation applies based on test type and payer policies.\nPlease refer to Z-code and MAC-specific requirements if applicable.")
-
-# CPT code mapping logic
-cpt_mapping = {
-    "<50": "81450",
-    "50-100": "81455",
-    ">100": "81455"
-}
-
-panel_gene_count = sophia_panels[selected_panel]
+cpt_mapping = {"<50": "81450", "50-100": "81455", ">100": "81455"}
 if panel_gene_count <= 50:
     suggested_cpt = cpt_mapping["<50"]
 elif 50 < panel_gene_count <= 100:
@@ -103,56 +115,11 @@ else:
 
 st.markdown(f"### CPT Code Recommendation: **{suggested_cpt}**")
 
-# Profitability & ROI simulation (simplified)
-st.markdown("### Step 8: Backbone Strategy Analysis")
-st.write("If using an exome/genome as a backbone, estimate minimum carve-out panels needed for profitability:")
-
-cost_per_backbone = st.number_input("Cost per exome/genome backbone ($):", min_value=0, value=728)
-price_per_panel = st.number_input("Reimbursed amount per carved-out panel ($):", min_value=0, value=600)
-backbone_reimbursed = st.number_input("Optional: Reimbursed amount for backbone ($, if billed):", min_value=0, value=0)
-
-if price_per_panel > 0:
-    if backbone_reimbursed > 0:
-        needed_panels = max(1, round((cost_per_backbone - backbone_reimbursed) / price_per_panel + 1))
-        st.success(f"▶️ To break even: **{needed_panels}** carved-out panel(s) needed per exome/genome **after backbone reimbursement**.")
-    else:
-        needed_panels = round(cost_per_backbone / price_per_panel + 1)
-        st.warning(f"⚠️ To break even (if backbone is not billed): **{needed_panels}** carved-out panel(s) needed per genome/exome.")
+# --------------------------
+# Step 6: Billing Documentation Guidance
+# --------------------------
+st.markdown("## Step 6: Billing Documentation")
+if selected_panel in risk_notes:
+    st.markdown(f"**{selected_panel}** → {risk_notes[selected_panel]['billing_note']}")
 else:
-    st.error("Panel reimbursement must be greater than $0.")
-
-# ROI Visualization
-st.markdown("### ROI Visualization")
-tests = list(range(1, needed_panels + 5))
-roi_values = [((price_per_panel * n) + backbone_reimbursed - cost_per_backbone) for n in tests]
-
-fig, ax = plt.subplots()
-ax.plot(tests, roi_values, marker='o')
-ax.axhline(0, color='gray', linestyle='--')
-ax.set_xlabel("# Carve-out Panels per Exome/Genome")
-ax.set_ylabel("Net Profit ($)")
-ax.set_title("ROI vs. Number of Carve-out Panels")
-
-st.pyplot(fig)
-
-# Export button
-st.markdown("### Download Summary")
-data = {
-    "Selected Test": selected_panel,
-    "Gene Count": panel_gene_count,
-    "Risk Level": risk_notes.get(selected_panel, {}).get("risk_level", "N/A"),
-    "Suggested CPT Code": suggested_cpt,
-    "Break-even Panels (No Backbone Reimbursement)": round(cost_per_backbone / price_per_panel + 1),
-    "Break-even Panels (With Backbone Reimbursement)": max(1, round((cost_per_backbone - backbone_reimbursed) / price_per_panel + 1))
-}
-df_export = pd.DataFrame([data])
-
-buffer = BytesIO()
-df_export.to_excel(buffer, index=False, engine='openpyxl')
-buffer.seek(0)
-st.download_button(
-    label="📥 Download Reimbursement Summary (Excel)",
-    data=buffer,
-    file_name="ngs_reimbursement_summary.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+    st.markdown("Standard documentation applies based on test type and payer policies.\nPlease refer to Z-code and MAC-specific requirements if applicable.")
