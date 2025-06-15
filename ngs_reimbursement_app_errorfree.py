@@ -71,7 +71,7 @@ else:
 selected_panel = st.selectbox("Available Panels:", available_panels)
 
 # --------------------------
-# Step 4: Risk Filter
+# Step 4: Risk Filter (Automated)
 # --------------------------
 st.markdown("## Step 4: Risk Filter")
 risk_notes = {
@@ -105,10 +105,20 @@ risk_notes = {
     }
 }
 
-filter_risk = st.multiselect("Filter panels by risk level:", options=["Low", "Medium", "High", "Very High"])
-filtered_panels = [p for p in available_panels if not filter_risk or risk_notes.get(p, {}).get("risk_level") in filter_risk]
-if selected_panel not in filtered_panels:
-    st.warning("Selected panel does not meet risk filter.")
+# Automatically determine risk level for selected panel
+if selected_panel in risk_notes:
+    auto_risk_level = risk_notes[selected_panel]['risk_level']
+else:
+    if sophia_panels[selected_panel] <= 50:
+        auto_risk_level = "Low"
+    elif 51 <= sophia_panels[selected_panel] <= 100:
+        auto_risk_level = "Medium"
+    elif 101 <= sophia_panels[selected_panel] <= 300:
+        auto_risk_level = "High"
+    else:
+        auto_risk_level = "Very High"
+
+st.markdown(f"### 🚦 Auto-Detected Risk Level: **{auto_risk_level}**")
 
 # --------------------------
 # Step 5: Risk & CPT Code Guidance
@@ -121,14 +131,6 @@ else:
     st.stop()
 
 if selected_panel in risk_notes:
-    risk_level = risk_notes[selected_panel]['risk_level']
-    badge_color = {
-        "Low": "✅",
-        "Medium": "🟡",
-        "High": "🔴",
-        "Very High": "🚨"
-    }.get(risk_level, "⚠️")
-    st.markdown(f"### {badge_color} **Risk Level: {risk_level}**")
     st.info(risk_notes[selected_panel]['billing_note'])
 
 cpt_mapping = {"<50": "81450", "50-100": "81455", ">100": "81455"}
